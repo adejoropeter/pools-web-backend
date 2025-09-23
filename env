@@ -1,0 +1,3 @@
+DATABASE_URL=postgresql://pool_db_user:eD5b01QNbQQmBC3Sx7CRSXmePcsXCj7a@dpg-d359hdj3fgac73b9b32g-a.oregon-postgres.render.com/pool_db
+ADMIN_KEY=8e9598570fae3da9dfec0b82e1111beb
+PORT=10000
