@@ -137,3 +137,11 @@ dist
 # Vite logs files
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
+
+# Puppeteer local Chromium binaries
+**/.local-chromium
+**/puppeteer/.local-chromium
+
+# Puppeteer cache
+.puppeteer_cache/
+
