@@ -2,9 +2,7 @@
 // Run with Node 18+ and "type": "module" in package.json
 import express from "express";
 import cors from "cors";
-import chromium from "chrome-aws-lambda";
 import puppeteer from "puppeteer";       // ✅ full puppeteer for local
-import puppeteerCore from "puppeteer-core"; // ✅ puppeteer-core for Render
 import * as cheerio from "cheerio";
 import pkg from "pg";
 import dotenv from "dotenv";
@@ -79,24 +77,12 @@ function randomUserAgent() {
 
 // ✅ Works both locally and on Render
 async function launchBrowser() {
-  if (process.env.NODE_ENV === "production") {
-    // Running on Render
-    const executablePath = await chromium.executablePath;
-
-    return puppeteerCore.launch({
-      args: chromium.args,
-      defaultViewport: chromium.defaultViewport,
-      executablePath,
-      headless: true, // chromium.headless is buggy in v10
-    });
-  } else {
-    // Running locally
-    return puppeteer.launch({
-      headless: true,
-      args: ["--no-sandbox", "--disable-setuid-sandbox"]
-    });
-  }
+  return puppeteer.launch({
+    headless: true,
+    args: ["--no-sandbox", "--disable-setuid-sandbox"],
+  });
 }
+
 
 async function fetchHtmlWithPuppeteer(url) {
   let browser;
