@@ -78,14 +78,15 @@ function randomUserAgent() {
 
 // ✅ Works both locally and on Render
 async function launchBrowser() {
-  return puppeteer.launch({
+  const browser = await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(),
-    headless: chromium.headless,
+    executablePath: await chromium.executablePath(), // ✅ always await
+    headless: chromium.headless, // true in serverless, false locally
   });
-}
 
+  return browser;
+}
 
 async function fetchHtmlWithPuppeteer(url) {
   let browser;
