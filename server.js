@@ -3,7 +3,7 @@
 import express from "express";
 import cors from "cors";
 import puppeteer from "puppeteer-core";       // ✅ full puppeteer for local
-import chromium from "@sparticuz/chromium-min"
+import chromium from "@sparticuz/chromium"
 import * as cheerio from "cheerio";
 import pkg from "pg";
 import dotenv from "dotenv";
