@@ -2,13 +2,14 @@
 // Run with Node 18+ and "type": "module" in package.json
 import express from "express";
 import cors from "cors";
-import puppeteer from "puppeteer-core";       // ✅ full puppeteer for local
+import * as puppeteer from "puppeteer-core";
 import chromium from "@sparticuz/chromium"
 import * as cheerio from "cheerio";
 import pkg from "pg";
 import dotenv from "dotenv";
 import process from "process";
 import { randomUUID } from "crypto";
+import fs from "fs";
 
 dotenv.config();
 const { Pool } = pkg;
@@ -76,12 +77,18 @@ function randomUserAgent() {
   return USER_AGENTS[Math.floor(Math.random() * USER_AGENTS.length)];
 }
 
+if (fs.existsSync("/tmp/chromium")) {
+  fs.rmSync("/tmp/chromium", { recursive: true, force: true });
+}
+
 // ✅ Works both locally and on Render
 async function launchBrowser() {
-  return puppeteer.launch({
+  const executablePath = await chromium.executablePath();
+
+  return await puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(), // ✅ use /tmp
+    executablePath: executablePath || "/usr/bin/google-chrome", // ✅ fallback for local dev
     headless: chromium.headless,
     ignoreHTTPSErrors: true,
   });
