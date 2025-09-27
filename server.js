@@ -78,14 +78,13 @@ function randomUserAgent() {
 
 // ✅ Works both locally and on Render
 async function launchBrowser() {
-  const browser = await puppeteer.launch({
+  return puppeteer.launch({
     args: chromium.args,
     defaultViewport: chromium.defaultViewport,
-    executablePath: await chromium.executablePath(), // ✅ always await
-    headless: chromium.headless, // true in serverless, false locally
+    executablePath: await chromium.executablePath("/tmp/chromium"), // ✅ use /tmp
+    headless: chromium.headless,
+    ignoreHTTPSErrors: true,
   });
-
-  return browser;
 }
 
 async function fetchHtmlWithPuppeteer(url) {
@@ -96,14 +95,21 @@ async function fetchHtmlWithPuppeteer(url) {
     await page.setViewport({ width: 1200, height: 900 });
     await page.setUserAgent(randomUserAgent());
     await page.setExtraHTTPHeaders({ "Accept-Language": "en-US,en;q=0.9" });
+
+    // Block heavy resources
     await page.setRequestInterception(true);
     page.on("request", (req) => {
-      if (["image", "stylesheet", "font", "media"].includes(req.resourceType()))
+      if (["image", "stylesheet", "font", "media"].includes(req.resourceType())) {
         req.abort();
-      else req.continue();
+      } else {
+        req.continue();
+      }
     });
 
-    await page.goto(url, { waitUntil: "networkidle2", timeout: 30000 });
+    // ✅ FIX: longer timeout to reduce 500 errors under load
+    await page.goto(url, { waitUntil: "networkidle2", timeout: 60000 });
+
+    // Don’t fail if selector missing
     try {
       await page.waitForSelector("select option", { timeout: 5000 });
     } catch {
@@ -111,13 +117,18 @@ async function fetchHtmlWithPuppeteer(url) {
     }
 
     const content = await page.content();
-    await page.close();
-    await browser.close();
     return content;
   } catch (err) {
-    if (browser) await browser.close().catch(() => {});
     console.error("Puppeteer fetch error:", err);
     throw err;
+  } finally {
+    if (browser) {
+      try {
+        await browser.close(); // ✅ FIX: guarantees no zombie Chromium
+      } catch (closeErr) {
+        console.warn("Browser close failed:", closeErr.message);
+      }
+    }
   }
 }
 
