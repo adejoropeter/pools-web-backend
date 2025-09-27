@@ -11,13 +11,13 @@
     "node": "20.x"
   },
   "dependencies": {
-    "@sparticuz/chromium": "^138.0.2",
+    "@sparticuz/chromium": "138.0.2",
     "axios": "^1.12.2",
     "cheerio": "^1.1.0",
     "cors": "^2.8.5",
     "dotenv": "^17.2.2",
     "express": "^5.1.0",
     "pg": "^8.16.3",
-    "puppeteer-core": "^24.22.3"
+    "puppeteer-core": "24.22.3"
   }
 }
