@@ -83,16 +83,27 @@ if (fs.existsSync("/tmp/chromium")) {
 
 // ✅ Works both locally and on Render
 async function launchBrowser() {
-  const executablePath = await chromium.executablePath();
+  if (process.env.NODE_ENV === "production") {
+    // ✅ Render / Serverless
+    const executablePath = await chromium.executablePath();
 
-  return await puppeteer.launch({
-    args: chromium.args,
-    defaultViewport: chromium.defaultViewport,
-    executablePath: executablePath || "/usr/bin/google-chrome", // ✅ fallback for local dev
-    headless: chromium.headless,
-    ignoreHTTPSErrors: true,
-  });
+    return await puppeteer.launch({
+      args: chromium.args,
+      defaultViewport: chromium.defaultViewport,
+      executablePath: executablePath || "/usr/bin/google-chrome",
+      headless: chromium.headless,
+      ignoreHTTPSErrors: true,
+    });
+  } else {
+    // ✅ Local Windows / Dev
+    const puppeteerLocal = await import("puppeteer"); // use full Puppeteer
+    return await puppeteerLocal.launch({
+      headless: true,
+      args: ["--no-sandbox", "--disable-setuid-sandbox"],
+    });
+  }
 }
+
 
 async function fetchHtmlWithPuppeteer(url) {
   let browser;
@@ -236,6 +247,19 @@ async function fetchAvailableWeeks() {
     return [];
   }
 }
+
+// ----------------- Admin login -----------------
+app.post("/api/admin/login", (req, res) => {
+  const { email, password } = req.body;
+  if (
+    email === process.env.ADMIN_EMAIL &&
+    password === process.env.ADMIN_PASSWORD
+  ) {
+    return res.json({ token: process.env.ADMIN_KEY });
+  }
+  return res.status(401).json({ error: "Invalid credentials" });
+});
+
 
 // ----------------- Routes -----------------
 app.get("/api/health", (req, res) => {
