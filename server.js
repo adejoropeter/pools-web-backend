@@ -218,16 +218,31 @@ async function fetchLatestFixtures() {
 
 async function fetchFixturesByDate(date) {
   const cached = await loadFixturesFromCache(date);
-  if (cached) return { week: date, fixtures: cached, cached: true };
-  const html = await fetchHtmlWithPuppeteer(
-    `https://ablefast.com/results/${date}`
-  );
+  const now = Date.now();
+  const cacheExpiry = 10 * 60 * 1000; // 10 mins
+
+  if (cached && now - cached.timestamp < cacheExpiry) {
+    return { week: date, fixtures: cached.fixtures, cached: true };
+  }
+
+  const html = await fetchHtmlWithPuppeteer(`https://ablefast.com/results/${date}`);
   const fixtures = await parseFixtures(html);
+
   await saveFixturesToCache(date, fixtures);
   return { week: date, fixtures, cached: false };
 }
 
+
 async function fetchAvailableWeeks() {
+  const cacheKey = "weeks";
+  const cached = await loadFixturesFromCache(cacheKey);
+  const now = Date.now();
+  const cacheExpiry = 60 * 60 * 1000; // 1 hour
+
+  if (cached && now - cached.timestamp < cacheExpiry) {
+    return cached.fixtures;
+  }
+
   try {
     const html = await fetchHtmlWithPuppeteer("https://ablefast.com/");
     const $ = cheerio.load(html);
@@ -241,12 +256,16 @@ async function fetchAvailableWeeks() {
       }
     });
 
+    // Save to cache
+    await saveFixturesToCache(cacheKey, weeks);
     return weeks;
   } catch (err) {
     console.error("fetchAvailableWeeks error:", err);
-    return [];
+    // fallback to cache if available
+    return cached ? cached.fixtures : [];
   }
 }
+
 
 // ----------------- Admin login -----------------
 app.post("/api/admin/login", (req, res) => {
