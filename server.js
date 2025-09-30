@@ -275,8 +275,9 @@ app.post("/api/admin/login", (req, res) => {
     password === process.env.ADMIN_PASSWORD
   ) {
     return res.json({ token: process.env.ADMIN_KEY });
+  } else {
+    return res.status(401).json({ error: "Invalid credentials" });
   }
-  return res.status(401).json({ error: "Invalid credentials" });
 });
 
 
