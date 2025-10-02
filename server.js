@@ -3,7 +3,7 @@
 import express from "express";
 import cors from "cors";
 import * as puppeteer from "puppeteer-core";
-import chromium from "@sparticuz/chromium"
+import chromium from "@sparticuz/chromium";
 import * as cheerio from "cheerio";
 import pkg from "pg";
 import dotenv from "dotenv";
@@ -104,7 +104,6 @@ async function launchBrowser() {
   }
 }
 
-
 async function fetchHtmlWithPuppeteer(url) {
   let browser;
   try {
@@ -151,21 +150,66 @@ async function fetchHtmlWithPuppeteer(url) {
 }
 
 // ----------------- Fixtures -----------------
-async function parseFixtures(html) {
+// parse fixtures, toggle scoreline depending on includeScore param
+// parse fixtures, toggle scoreline depending on includeScore param
+async function parseFixtures(html, includeScore = true) {
   const $ = cheerio.load(html);
   const fixtures = [];
+
   $("#table tbody tr").each((i, row) => {
     const cols = $(row).find("td");
     const number = $(cols[0]).text().trim();
-    const home = $(cols[1]).text().trim();
-    const away = $(cols[3]).text().trim();
-    const result = $(cols[4]).text().trim();
-    const status = $(cols[5]).text().trim();
-    if (number && home && away)
-      fixtures.push({ number, home, away, result, status });
+
+    let home = $(cols[1]).text().trim();
+    let away = $(cols[3]).text().trim();
+
+    // Raw scoreline text (e.g. "(2)  x  (3)")
+    const rawScore = $(cols[2]).text().trim();
+    const status = $(cols[5]).text().trim() || "FT";
+
+    let homeScore = null;
+    let awayScore = null;
+    let scoreline = null;
+    let result = null;
+
+    if (includeScore && rawScore) {
+      // Match (n) x (m)
+      const regex = /\((\d+)\)\s*x\s*\((\d+)\)/;
+      const m = rawScore.match(regex);
+
+      if (m) {
+        homeScore = parseInt(m[1], 10);
+        awayScore = parseInt(m[2], 10);
+        scoreline = `${homeScore} - ${awayScore}`;
+
+        if (homeScore > awayScore) result = "Home";
+        else if (homeScore < awayScore) result = "Away";
+        else result = homeScore === 0 ? "no score draw" : "score draw";
+      }
+    }
+
+    if (number && home && away) {
+      const fixture = {
+        number,
+        home,
+        away,
+        status,
+      };
+
+      if (includeScore) {
+        fixture.homeScore = homeScore;
+        fixture.awayScore = awayScore;
+        fixture.scoreline = scoreline;
+        fixture.result = result;
+      }
+
+      fixtures.push(fixture);
+    }
   });
+
   return fixtures;
 }
+
 
 async function saveFixturesToCache(week, fixtures) {
   try {
@@ -209,7 +253,8 @@ async function fetchLatestFixtures() {
   }
 
   const html = await fetchHtmlWithPuppeteer("https://ablefast.com/");
-  const fixtures = await parseFixtures(html);
+  // ❌ no scoreline for latest fixtures
+  const fixtures = await parseFixtures(html, false);
 
   await saveFixturesToCache(week, { fixtures, timestamp: now });
 
@@ -226,12 +271,12 @@ async function fetchFixturesByDate(date) {
   }
 
   const html = await fetchHtmlWithPuppeteer(`https://ablefast.com/results/${date}`);
-  const fixtures = await parseFixtures(html);
+  // ✅ include scoreline for past fixtures
+  const fixtures = await parseFixtures(html, true);
 
   await saveFixturesToCache(date, fixtures);
   return { week: date, fixtures, cached: false };
 }
-
 
 async function fetchAvailableWeeks() {
   const cacheKey = "weeks";
@@ -266,7 +311,6 @@ async function fetchAvailableWeeks() {
   }
 }
 
-
 // ----------------- Admin login -----------------
 app.post("/api/admin/login", (req, res) => {
   const { email, password } = req.body;
@@ -279,7 +323,6 @@ app.post("/api/admin/login", (req, res) => {
     return res.status(401).json({ error: "Invalid credentials" });
   }
 });
-
 
 // ----------------- Routes -----------------
 app.get("/api/health", (req, res) => {
