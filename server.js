@@ -50,10 +50,10 @@ async function initDB() {
     console.log("DB initialized ✅");
   } catch (err) {
     console.error("DB init error:", err);
-    process.exit(1);
+    // process.exit(1);
   }
 }
-await initDB();
+// await initDB();
 
 // ----------------- Admin auth -----------------
 const ADMIN_KEY = process.env.ADMIN_KEY || "";
@@ -464,6 +464,14 @@ app.delete("/api/adverts/:id", requireAdmin, async (req, res) => {
 });
 
 // ----------------- Start -----------------
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Pool Fixtures & Adverts API running on port ${PORT}`);
+
+  try {
+    await initDB();
+    console.log("DB initialized ✅");
+  } catch (err) {
+    console.error("DB init failed ❌", err.message);
+  }
 });
+
